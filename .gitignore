@@ -1,0 +1,13 @@
+# 1. Ignorar todo por defecto en la raíz
+*
+
+# 2. Permitir exclusivamente los archivos y carpetas deseados
+!/frdmmcxa156/
+!/frdmmcxa156/**
+!/CMakeLists.txt
+!/CMakePresets.json
+!/led_blinky.c
+!/readme.md
+
+# 3. Asegurar que el propio archivo .gitignore no sea ignorado
+!.gitignore

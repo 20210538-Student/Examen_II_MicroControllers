@@ -21,8 +21,8 @@ mcux_add_source(
 )
 
 mcux_add_source(
-    SOURCES led_blinky/peripherals.c
-            led_blinky/peripherals.h
+    SOURCES frdmmcxa156/board/peripherals.c
+            frdmmcxa156/board/peripherals.h
 )
 mcux_convert_binary(BINARY ${APPLICATION_BINARY_DIR}/${MCUX_SDK_PROJECT_NAME}.bin)
 mcux_add_config_mex_path( PATH ${board} )

@@ -14,6 +14,12 @@ mcu_data: ksdk2_0
 processor_version: 26.06.20
 pin_labels:
 - {pin_num: '63', pin_signal: P3_12/LPUART2_RTS_B/LPUART3_TXD/CT1_MAT2/PWM0_X0/FLEXIO0_D20/PWM1_A2, label: LED_RED, identifier: LED_RED}
+- {pin_num: '62', pin_signal: P3_13/LPUART2_CTS_B/LPUART3_RXD/CT1_MAT3/PWM0_X1/FLEXIO0_D21/PWM1_B2, label: GREEN_LED, identifier: GREEN_LED}
+- {pin_num: '78', pin_signal: P0_2/TDO/SWO/LPUART0_RXD/LPSPI0_SCK/CT0_MAT0/UTICK_CAP0/FLEXIO0_D2, label: RX, identifier: Rx}
+- {pin_num: '79', pin_signal: P0_3/TDI/LPUART0_TXD/LPSPI0_SDO/CT0_MAT1/UTICK_CAP1/FLEXIO0_D3/CMP0_OUT, label: TX, identifier: Tx;TX}
+- {pin_num: '36', pin_signal: P2_15/TRIG_OUT4/LPSPI1_SDI/LPUART1_RTS_B/CT4_MAT3/CT0_MAT2/FLEXIO0_D23, label: ADC_pin, identifier: ADC_CH;ADC_pin}
+- {pin_num: '100', pin_signal: P1_7/TRIG_OUT2/LPUART2_CTS_B/CT_INP7/CT4_MAT1/FLEXIO0_D15, label: SW2, identifier: SW2}
+- {pin_num: '53', pin_signal: P3_22/LPUART1_RTS_B/CT_INP10/FLEXIO0_D30/PWM1_X2, label: Alarm_LED, identifier: Alarm_LED}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
  */
 /* clang-format on */
@@ -40,8 +46,15 @@ void BOARD_InitBootPins(void)
 BOARD_InitPins:
 - options: {callFromInitBoot: 'true', coreID: cm33_core0, enableClock: 'true'}
 - pin_list:
-  - {pin_num: '63', peripheral: GPIO3, signal: 'GPIO, 12', pin_signal: P3_12/LPUART2_RTS_B/LPUART3_TXD/CT1_MAT2/PWM0_X0/FLEXIO0_D20/PWM1_A2, direction: OUTPUT, slew_rate: fast,
-    open_drain: disable, drive_strength: low, pull_select: down, pull_enable: disable, input_buffer: enable, invert_input: normal}
+  - {pin_num: '62', peripheral: GPIO3, signal: 'GPIO, 13', pin_signal: P3_13/LPUART2_CTS_B/LPUART3_RXD/CT1_MAT3/PWM0_X1/FLEXIO0_D21/PWM1_B2, direction: OUTPUT, gpio_init_state: 'true',
+    slew_rate: fast, open_drain: disable, drive_strength: low, pull_select: up, pull_enable: enable, input_buffer: enable, invert_input: normal}
+  - {pin_num: '78', peripheral: LPUART0, signal: RX, pin_signal: P0_2/TDO/SWO/LPUART0_RXD/LPSPI0_SCK/CT0_MAT0/UTICK_CAP0/FLEXIO0_D2, pull_enable: enable}
+  - {pin_num: '79', peripheral: LPUART0, signal: TX, pin_signal: P0_3/TDI/LPUART0_TXD/LPSPI0_SDO/CT0_MAT1/UTICK_CAP1/FLEXIO0_D3/CMP0_OUT, identifier: TX}
+  - {pin_num: '53', peripheral: GPIO3, signal: 'GPIO, 22', pin_signal: P3_22/LPUART1_RTS_B/CT_INP10/FLEXIO0_D30/PWM1_X2, direction: OUTPUT, gpio_init_state: 'true',
+    pull_select: up, pull_enable: enable}
+  - {pin_num: '36', peripheral: ADC0, signal: 'A, 2', pin_signal: P2_15/TRIG_OUT4/LPSPI1_SDI/LPUART1_RTS_B/CT4_MAT3/CT0_MAT2/FLEXIO0_D23, identifier: ADC_pin}
+  - {pin_num: '100', peripheral: GPIO1, signal: 'GPIO, 7', pin_signal: P1_7/TRIG_OUT2/LPUART2_CTS_B/CT_INP7/CT4_MAT1/FLEXIO0_D15, direction: INPUT, gpio_per_interrupt: kGPIO_InterruptFallingEdge,
+    pull_select: up, pull_enable: enable}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
  */
 /* clang-format on */
@@ -54,46 +67,148 @@ BOARD_InitPins:
  * END ****************************************************************************************************************/
 void BOARD_InitPins(void)
 {
+    /* PORT0: Peripheral clock is enabled */
+    CLOCK_EnableClock(kCLOCK_GatePORT0);
+    /* PORT1: Peripheral clock is enabled */
+    CLOCK_EnableClock(kCLOCK_GatePORT1);
+    /* PORT2: Peripheral clock is enabled */
+    CLOCK_EnableClock(kCLOCK_GatePORT2);
     /* PORT3: Peripheral clock is enabled */
     CLOCK_EnableClock(kCLOCK_GatePORT3);
+    /* GPIO1: Peripheral clock is enabled */
+    CLOCK_EnableClock(kCLOCK_GateGPIO1);
     /* GPIO3: Peripheral clock is enabled */
     CLOCK_EnableClock(kCLOCK_GateGPIO3);
+    /* LPUART0 peripheral is released from reset */
+    RESET_ReleasePeripheralReset(kLPUART0_RST_SHIFT_RSTn);
+    /* PORT0 peripheral is released from reset */
+    RESET_ReleasePeripheralReset(kPORT0_RST_SHIFT_RSTn);
+    /* GPIO1 peripheral is released from reset */
+    RESET_ReleasePeripheralReset(kGPIO1_RST_SHIFT_RSTn);
+    /* PORT1 peripheral is released from reset */
+    RESET_ReleasePeripheralReset(kPORT1_RST_SHIFT_RSTn);
+    /* ADC0 peripheral is released from reset */
+    RESET_ReleasePeripheralReset(kADC0_RST_SHIFT_RSTn);
+    /* PORT2 peripheral is released from reset */
+    RESET_ReleasePeripheralReset(kPORT2_RST_SHIFT_RSTn);
     /* GPIO3 peripheral is released from reset */
     RESET_ReleasePeripheralReset(kGPIO3_RST_SHIFT_RSTn);
     /* PORT3 peripheral is released from reset */
     RESET_ReleasePeripheralReset(kPORT3_RST_SHIFT_RSTn);
 
-    const port_pin_config_t LED_RED = {/* Internal pull-up/down resistor is disabled */
-                                       .pullSelect = kPORT_PullDisable,
-                                       /* Low internal pull resistor value is selected. */
-                                       .pullValueSelect = kPORT_LowPullResistor,
-                                       /* Fast slew rate is configured */
-                                       .slewRate = kPORT_FastSlewRate,
-                                       /* Passive input filter is disabled */
-                                       .passiveFilterEnable = kPORT_PassiveFilterDisable,
-                                       /* Open drain output is disabled */
-                                       .openDrainEnable = kPORT_OpenDrainDisable,
-                                       /* Low drive strength is configured */
-                                       .driveStrength = kPORT_LowDriveStrength,
-                                       /* Normal drive strength is configured */
-                                       .driveStrength1 = kPORT_NormalDriveStrength,
-                                       /* Pin is configured as P3_12 */
-                                       .mux = kPORT_MuxAlt0,
-                                       /* Digital input enabled */
-                                       .inputBuffer = kPORT_InputBufferEnable,
-                                       /* Digital input is not inverted */
-                                       .invertInput = kPORT_InputNormal,
-                                       /* Pin Control Register fields [15:0] are not locked */
-                                       .lockRegister = kPORT_UnlockRegister};
-    /* PORT3_12 (pin 63) is configured as P3_12 */
-    PORT_SetPinConfig(BOARD_INITPINS_LED_RED_PORT, BOARD_INITPINS_LED_RED_PIN, &LED_RED);
+    /* PORT0_2 (pin 78) is configured as LPUART0_RXD */
+    PORT_SetPinMux(BOARD_INITPINS_Rx_PORT, BOARD_INITPINS_Rx_PIN, kPORT_MuxAlt2);
 
-    gpio_pin_config_t LED_RED_config = {
-        .pinDirection = kGPIO_DigitalOutput,
+    PORT0->PCR[2] = ((PORT0->PCR[2] &
+                      /* Mask bits to zero which are setting */
+                      (~(PORT_PCR_PE_MASK | PORT_PCR_IBE_MASK)))
+
+                     /* Pull Enable: Enables. */
+                     | PORT_PCR_PE(PCR_PE_pe1)
+
+                     /* Input Buffer Enable: Enables. */
+                     | PORT_PCR_IBE(PCR_IBE_ibe1));
+
+    /* PORT0_3 (pin 79) is configured as LPUART0_TXD */
+    PORT_SetPinMux(BOARD_INITPINS_TX_PORT, BOARD_INITPINS_TX_PIN, kPORT_MuxAlt2);
+
+    PORT0->PCR[3] = ((PORT0->PCR[3] &
+                      /* Mask bits to zero which are setting */
+                      (~(PORT_PCR_IBE_MASK)))
+
+                     /* Input Buffer Enable: Enables. */
+                     | PORT_PCR_IBE(PCR_IBE_ibe1));
+
+    /* PORT1_7 (pin 100) is configured as P1_7 */
+    PORT_SetPinMux(BOARD_INITPINS_SW2_PORT, BOARD_INITPINS_SW2_PIN, kPORT_MuxAlt0);
+
+    PORT1->PCR[7] = ((PORT1->PCR[7] &
+                      /* Mask bits to zero which are setting */
+                      (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_IBE_MASK)))
+
+                     /* Pull Select: Enables internal pullup resistor. */
+                     | PORT_PCR_PS(PCR_PS_ps1)
+
+                     /* Pull Enable: Enables. */
+                     | PORT_PCR_PE(PCR_PE_pe1)
+
+                     /* Input Buffer Enable: Enables. */
+                     | PORT_PCR_IBE(PCR_IBE_ibe1));
+
+    PORT2->PCR[15] = ((PORT2->PCR[15] &
+                       /* Mask bits to zero which are setting */
+                       (~(PORT_PCR_MUX_MASK | PORT_PCR_IBE_MASK)))
+
+                      /* Pin Multiplex Control: PORT2_15 (pin 36) is configured as ADC0_A2. */
+                      | PORT_PCR_MUX(PORT2_PCR15_MUX_mux00)
+
+                      /* Input Buffer Enable: Disables. */
+                      | PORT_PCR_IBE(PCR_IBE_ibe0));
+
+    const port_pin_config_t GREEN_LED = {/* Internal pull-up resistor is enabled */
+                                         .pullSelect = kPORT_PullUp,
+                                         /* Low internal pull resistor value is selected. */
+                                         .pullValueSelect = kPORT_LowPullResistor,
+                                         /* Fast slew rate is configured */
+                                         .slewRate = kPORT_FastSlewRate,
+                                         /* Passive input filter is disabled */
+                                         .passiveFilterEnable = kPORT_PassiveFilterDisable,
+                                         /* Open drain output is disabled */
+                                         .openDrainEnable = kPORT_OpenDrainDisable,
+                                         /* Low drive strength is configured */
+                                         .driveStrength = kPORT_LowDriveStrength,
+                                         /* Normal drive strength is configured */
+                                         .driveStrength1 = kPORT_NormalDriveStrength,
+                                         /* Pin is configured as P3_13 */
+                                         .mux = kPORT_MuxAlt0,
+                                         /* Digital input enabled */
+                                         .inputBuffer = kPORT_InputBufferEnable,
+                                         /* Digital input is not inverted */
+                                         .invertInput = kPORT_InputNormal,
+                                         /* Pin Control Register fields [15:0] are not locked */
+                                         .lockRegister = kPORT_UnlockRegister};
+    /* PORT3_13 (pin 62) is configured as P3_13 */
+    PORT_SetPinConfig(BOARD_INITPINS_GREEN_LED_PORT, BOARD_INITPINS_GREEN_LED_PIN, &GREEN_LED);
+
+    PORT3->PCR[22] = ((PORT3->PCR[22] &
+                       /* Mask bits to zero which are setting */
+                       (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_MUX_MASK | PORT_PCR_IBE_MASK)))
+
+                      /* Pull Select: Enables internal pullup resistor. */
+                      | PORT_PCR_PS(PCR_PS_ps1)
+
+                      /* Pull Enable: Enables. */
+                      | PORT_PCR_PE(PCR_PE_pe1)
+
+                      /* Pin Multiplex Control: PORT3_22 (pin 53) is configured as P3_22. */
+                      | PORT_PCR_MUX(PORT3_PCR22_MUX_mux00)
+
+                      /* Input Buffer Enable: Enables. */
+                      | PORT_PCR_IBE(PCR_IBE_ibe1));
+
+    gpio_pin_config_t SW2_config = {
+        .pinDirection = kGPIO_DigitalInput,
         .outputLogic = 0U
     };
-    /* Initialize GPIO functionality on pin PIO3_12 (pin 63)  */
-    GPIO_PinInit(BOARD_INITPINS_LED_RED_GPIO, BOARD_INITPINS_LED_RED_PIN, &LED_RED_config);
+    /* Initialize GPIO functionality on pin PIO1_7 (pin 100)  */
+    GPIO_PinInit(BOARD_INITPINS_SW2_GPIO, BOARD_INITPINS_SW2_PIN, &SW2_config);
+
+    gpio_pin_config_t GREEN_LED_config = {
+        .pinDirection = kGPIO_DigitalOutput,
+        .outputLogic = 1U
+    };
+    /* Initialize GPIO functionality on pin PIO3_13 (pin 62)  */
+    GPIO_PinInit(BOARD_INITPINS_GREEN_LED_GPIO, BOARD_INITPINS_GREEN_LED_PIN, &GREEN_LED_config);
+
+    gpio_pin_config_t Alarm_LED_config = {
+        .pinDirection = kGPIO_DigitalOutput,
+        .outputLogic = 1U
+    };
+    /* Initialize GPIO functionality on pin PIO3_22 (pin 53)  */
+    GPIO_PinInit(BOARD_INITPINS_Alarm_LED_GPIO, BOARD_INITPINS_Alarm_LED_PIN, &Alarm_LED_config);
+
+    /* Interrupt configuration on GPIO1_7 (pin 100): Interrupt on falling edge */
+    GPIO_SetPinInterruptConfig(BOARD_INITPINS_SW2_GPIO, BOARD_INITPINS_SW2_PIN, kGPIO_InterruptFallingEdge);
 }
 /***********************************************************************************************************************
  * EOF

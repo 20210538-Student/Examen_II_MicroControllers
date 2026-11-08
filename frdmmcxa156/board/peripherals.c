@@ -79,36 +79,72 @@ static void NVIC_init(void) {
 } */
 
 /***********************************************************************************************************************
- * SysTick initialization code
+ * CTIMER0 initialization code
  **********************************************************************************************************************/
 /* clang-format off */
 /* TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
 instance:
-- name: 'SysTick'
-- type: 'systick'
-- mode: 'GENERAL'
+- name: 'CTIMER0'
+- type: 'ctimer'
+- mode: 'Capture_Match'
 - custom_name_enabled: 'false'
-- type_id: 'systick'
+- type_id: 'ctimer_2.2.2'
 - functional_group: 'BOARD_InitPeripherals'
-- peripheral: 'SysTick'
+- peripheral: 'CTIMER0'
 - config_sets:
-  - fsl_systick:
-    - timingConfig:
-      - clockSource: 'ProcessorClock'
-      - clockSourceFreq: 'custom:12000000'
-      - reload: '1s'
-    - interrupt:
-      - IRQn: 'SysTick_IRQn'
-      - enable_custom_name: 'true'
-      - handler_custom_name: 'SysTick_Handler'
+  - fsl_ctimer:
+    - ctimerConfig:
+      - mode: 'kCTIMER_TimerMode'
+      - clockSource: 'FunctionClock'
+      - clockSourceFreq: 'ClocksTool_DefaultInit'
+      - timerPrescaler: '12'
+    - EnableTimerInInit: 'true'
+    - matchChannels:
+      - 0:
+        - matchChannelPrefixId: 'Match_0'
+        - matchChannel: 'kCTIMER_Match_0'
+        - matchValueStr: '1ms'
+        - enableCounterReset: 'true'
+        - enableCounterStop: 'false'
+        - outControl: 'kCTIMER_Output_NoAction'
+        - outPinInitValue: 'low'
+        - enableInterrupt: 'true'
+    - captureChannels: []
+    - interruptCallbackConfig:
+      - interrupt:
+        - IRQn: 'CTIMER0_IRQn'
+        - enable_priority: 'true'
+        - priority: '2'
+      - callback: 'kCTIMER_SingleCallback'
+      - singleCallback: 'CTIMER0_TimebaseCB'
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
 /* clang-format on */
+const ctimer_config_t CTIMER0_config = {
+  .mode = kCTIMER_TimerMode,
+  .input = kCTIMER_Capture_0,
+  .prescale = 11
+};
+const ctimer_match_config_t CTIMER0_Match_0_config = {
+  .matchValue = 999,
+  .enableCounterReset = true,
+  .enableCounterStop = false,
+  .outControl = kCTIMER_Output_NoAction,
+  .outPinInitState = false,
+  .enableInterrupt = true
+};
+/* Single callback functions definition */
+ctimer_callback_t CTIMER0_callback[] = {CTIMER0_TimebaseCB};
 
-static void SysTick_init(void) {
-  /* Initialize the systick module. */
-  SysTick->LOAD = (uint32_t)(SYSTICK_TICKS - 1UL);
-  SysTick->VAL = 0UL;
-  SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_TICKINT_Msk | SysTick_CTRL_ENABLE_Msk;
+static void CTIMER0_init(void) {
+  /* CTIMER0 peripheral initialization */
+  CTIMER_Init(CTIMER0_PERIPHERAL, &CTIMER0_config);
+  /* Interrupt vector CTIMER0_IRQn priority settings in the NVIC. */
+  NVIC_SetPriority(CTIMER0_TIMER_IRQN, CTIMER0_TIMER_IRQ_PRIORITY);
+  /* Match channel 0 of CTIMER0 peripheral initialization */
+  CTIMER_SetupMatch(CTIMER0_PERIPHERAL, CTIMER0_MATCH_0_CHANNEL, &CTIMER0_Match_0_config);
+  CTIMER_RegisterCallBack(CTIMER0_PERIPHERAL, CTIMER0_callback, kCTIMER_SingleCallback);
+  /* Start the timer */
+  CTIMER_StartTimer(CTIMER0_PERIPHERAL);
 }
 
 /***********************************************************************************************************************
@@ -117,7 +153,7 @@ static void SysTick_init(void) {
 void BOARD_InitPeripherals(void)
 {
   /* Initialize components */
-  SysTick_init();
+  CTIMER0_init();
 }
 
 /***********************************************************************************************************************

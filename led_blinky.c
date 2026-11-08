@@ -14,6 +14,7 @@
 #include "peripherals.h"
 #include "fsl_ctimer.h"
 #include "fsl_lpadc.h"
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -26,6 +27,13 @@
  * Prototypes
  ******************************************************************************/
 
+/*******************************************************************************
+ * Variables del ADC
+ ******************************************************************************/
+static volatile uint16_t adc_value = 0U;
+static volatile bool adc_valid = false;
+
+static uint8_t texto_adc[32];
 /*******************************************************************************
  * Variables del pulsador
  ******************************************************************************/
@@ -41,8 +49,8 @@ static uint8_t texto_pause[] = "PAUSE\r\n";
 static lpuart_handle_t uart_handle; //static para que su memoria siga disponible mientras el driver transmite datos
 static volatile bool UART_OCUPED = false; //volatile para que el compilador no optimice o modifique la variable en la compilacion y la lea siempre de memoria
 
-static uint8_t encendido[] = "ENCENDIDO\r\n";
-static uint8_t apagado[]   = "APAGADO\r\n";
+//static uint8_t encendido[] = "ENCENDIDO\r\n";
+//static uint8_t apagado[]   = "APAGADO\r\n";
 
 /*******************************************************************************
  * Variable del CTIMER base del tiepo
@@ -66,6 +74,16 @@ void BTON_IRQHANDLER(void)
     }
 }
 
+void ADC0_IRQHandler(void)
+{
+    lpadc_conv_result_t resultado;
+
+    while (LPADC_GetConvResult(ADC0, &resultado))
+    {
+        adc_value = resultado.convValue;
+        adc_valid = true;
+    }
+}
 
 void CTIMER0_TimebaseCB(uint32_t flags) //Base temporal de tiempo en ms
 {
@@ -151,6 +169,7 @@ int main(void)
 
     uint32_t last_change = tiempo_ms;
     uint32_t last_telemetry = tiempo_ms;
+    uint32_t last_adc = tiempo_ms;
     bool led_on = false;
 
     while (1)
@@ -182,12 +201,30 @@ int main(void)
             led_on = !led_on;
         }
 
+        /* Adquisición ADC cada 100 ms, también en PAUSE. */
+        if ((uint32_t)(now - last_adc) >= 100U)
+        {
+            last_adc += 100U;
+
+            /* Trigger 0 -> comando 1 -> entrada A2 / P2_15. */
+            LPADC_DoSoftwareTrigger(ADC0, 1UL << 0);
+        }
+
         if ((uint32_t)(now - last_telemetry) >= 1000U)
         {
             last_telemetry += 1000U;
-            if (!mode_pending)
+
+            if (!mode_pending && !UART_OCUPED && adc_valid)
             {
-                UART_sendtext(led_on ? encendido : apagado);
+                uint16_t muestra = adc_value;
+
+                int longitud = snprintf((char *)texto_adc, sizeof(texto_adc), "ADC=%u\r\n", (unsigned int)muestra);
+
+                if ((longitud > 0) &&
+                    ((size_t)longitud < sizeof(texto_adc)))
+                {
+                    UART_sendtext(texto_adc);
+                }
             }
         }
     }

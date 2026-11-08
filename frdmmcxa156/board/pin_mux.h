@@ -51,9 +51,9 @@ void BOARD_InitBootPins(void);
   @{ */
 
 /* Symbols to be used with PORT driver */
-#define BOARD_INITPINS_Rx_PORT PORT0               /*!<@brief PORT peripheral base pointer */
-#define BOARD_INITPINS_Rx_PIN 2U                   /*!<@brief PORT pin number */
-#define BOARD_INITPINS_Rx_PIN_MASK (1U << 2U)      /*!<@brief PORT pin mask */
+#define BOARD_INITPINS_RX_PORT PORT0               /*!<@brief PORT peripheral base pointer */
+#define BOARD_INITPINS_RX_PIN 2U                   /*!<@brief PORT pin number */
+#define BOARD_INITPINS_RX_PIN_MASK (1U << 2U)      /*!<@brief PORT pin mask */
                                                    /* @} */
 
 /*! @name PORT0_3 (number 79), TX

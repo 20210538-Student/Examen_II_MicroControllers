@@ -43,6 +43,10 @@ static bool mode_pending = false;
 /*******************************************************************************
  * Variables del UART nonblocking RECEPTOR
  ******************************************************************************/
+static uint8_t rx_buffer[128];
+/*******************************************************************************
+ * Variables del UART nonblocking TRANSMISOR
+ ******************************************************************************/
 static uint8_t texto_run[]   = "RUN\r\n";
 static uint8_t texto_pause[] = "PAUSE\r\n";
 

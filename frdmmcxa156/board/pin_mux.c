@@ -15,7 +15,7 @@ processor_version: 26.06.20
 pin_labels:
 - {pin_num: '63', pin_signal: P3_12/LPUART2_RTS_B/LPUART3_TXD/CT1_MAT2/PWM0_X0/FLEXIO0_D20/PWM1_A2, label: LED_RED, identifier: LED_RED}
 - {pin_num: '62', pin_signal: P3_13/LPUART2_CTS_B/LPUART3_RXD/CT1_MAT3/PWM0_X1/FLEXIO0_D21/PWM1_B2, label: Activity_LED, identifier: GREEN_LED;activity_Led;Activity_Led;Activity_LED}
-- {pin_num: '78', pin_signal: P0_2/TDO/SWO/LPUART0_RXD/LPSPI0_SCK/CT0_MAT0/UTICK_CAP0/FLEXIO0_D2, label: RX, identifier: Rx}
+- {pin_num: '78', pin_signal: P0_2/TDO/SWO/LPUART0_RXD/LPSPI0_SCK/CT0_MAT0/UTICK_CAP0/FLEXIO0_D2, label: RX, identifier: Rx;RX}
 - {pin_num: '79', pin_signal: P0_3/TDI/LPUART0_TXD/LPSPI0_SDO/CT0_MAT1/UTICK_CAP1/FLEXIO0_D3/CMP0_OUT, label: TX, identifier: Tx;TX}
 - {pin_num: '36', pin_signal: P2_15/TRIG_OUT4/LPSPI1_SDI/LPUART1_RTS_B/CT4_MAT3/CT0_MAT2/FLEXIO0_D23, label: ADC_pin, identifier: ADC_CH;ADC_pin}
 - {pin_num: '100', pin_signal: P1_7/TRIG_OUT2/LPUART2_CTS_B/CT_INP7/CT4_MAT1/FLEXIO0_D15, label: SW2, identifier: SW2}
@@ -49,7 +49,8 @@ BOARD_InitPins:
   - {pin_num: '62', peripheral: GPIO3, signal: 'GPIO, 13', pin_signal: P3_13/LPUART2_CTS_B/LPUART3_RXD/CT1_MAT3/PWM0_X1/FLEXIO0_D21/PWM1_B2, identifier: Activity_LED,
     direction: OUTPUT, gpio_init_state: 'true', slew_rate: fast, open_drain: disable, drive_strength: low, pull_select: up, pull_enable: enable, input_buffer: enable,
     invert_input: normal}
-  - {pin_num: '78', peripheral: LPUART0, signal: RX, pin_signal: P0_2/TDO/SWO/LPUART0_RXD/LPSPI0_SCK/CT0_MAT0/UTICK_CAP0/FLEXIO0_D2, pull_enable: enable}
+  - {pin_num: '78', peripheral: LPUART0, signal: RX, pin_signal: P0_2/TDO/SWO/LPUART0_RXD/LPSPI0_SCK/CT0_MAT0/UTICK_CAP0/FLEXIO0_D2, identifier: RX, pull_select: up,
+    pull_enable: enable}
   - {pin_num: '79', peripheral: LPUART0, signal: TX, pin_signal: P0_3/TDI/LPUART0_TXD/LPSPI0_SDO/CT0_MAT1/UTICK_CAP1/FLEXIO0_D3/CMP0_OUT, identifier: TX}
   - {pin_num: '53', peripheral: GPIO3, signal: 'GPIO, 22', pin_signal: P3_22/LPUART1_RTS_B/CT_INP10/FLEXIO0_D30/PWM1_X2, direction: OUTPUT, gpio_init_state: 'true',
     pull_select: up, pull_enable: enable}
@@ -98,11 +99,14 @@ void BOARD_InitPins(void)
     RESET_ReleasePeripheralReset(kPORT3_RST_SHIFT_RSTn);
 
     /* PORT0_2 (pin 78) is configured as LPUART0_RXD */
-    PORT_SetPinMux(BOARD_INITPINS_Rx_PORT, BOARD_INITPINS_Rx_PIN, kPORT_MuxAlt2);
+    PORT_SetPinMux(BOARD_INITPINS_RX_PORT, BOARD_INITPINS_RX_PIN, kPORT_MuxAlt2);
 
     PORT0->PCR[2] = ((PORT0->PCR[2] &
                       /* Mask bits to zero which are setting */
-                      (~(PORT_PCR_PE_MASK | PORT_PCR_IBE_MASK)))
+                      (~(PORT_PCR_PS_MASK | PORT_PCR_PE_MASK | PORT_PCR_IBE_MASK)))
+
+                     /* Pull Select: Enables internal pullup resistor. */
+                     | PORT_PCR_PS(PCR_PS_ps1)
 
                      /* Pull Enable: Enables. */
                      | PORT_PCR_PE(PCR_PE_pe1)

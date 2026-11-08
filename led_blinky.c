@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -32,6 +33,11 @@
 /*******************************************************************************
  * Code
  ******************************************************************************/
+static lpuart_handle_t uart_handle; //static para que su memoria siga disponible mientras el driver transmite datos
+static volatile bool UART_OCUPED = false; //volatile para que el compilador no optimice o modifique la variable en la compilacion y la lea siempre de memoria
+
+static uint8_t encendido[] = "ENCENDIDO\r\n";
+static uint8_t apagado[]   = "APAGADO\r\n";
 
 /*!
  * @brief Main function
@@ -44,6 +50,18 @@ void CTIMER0_TimebaseCB(uint32_t flags)
     tiempo_ms++;
 }
 
+static void UART_Callback(LPUART_Type *base, lpuart_handle_t *handle, status_t status, void *userData)
+{
+    (void)base;
+    (void)handle;
+    (void)userData;
+
+    if (status == kStatus_LPUART_TxIdle)
+    {
+        UART_OCUPED = false;
+    }
+}
+
 int main(void)
 {
 
@@ -52,8 +70,11 @@ int main(void)
     /* Inicializo en bajo. */
     GPIO_PinWrite(BOARD_INITPINS_Activity_LED_GPIO, BOARD_INITPINS_Activity_LED_GPIO_PIN, 1U);
     GPIO_PinWrite(BOARD_INITPINS_Alarm_LED_GPIO, BOARD_INITPINS_Alarm_LED_GPIO_PIN, 1U);
-    uint32_t last_change = tiempo_ms;
+    LPUART_TransferCreateHandle(LPUART0, &uart_handle, UART_Callback, NULL);
 
+    uint32_t last_change = tiempo_ms;
+    bool led_on = false;
+    
     while (1)
     {
         /* Una lectura del contador para esta iteración. */
@@ -66,8 +87,32 @@ int main(void)
             GPIO_PortToggle(
                 BOARD_INITPINS_Activity_LED_GPIO,
                 BOARD_INITPINS_Activity_LED_GPIO_PIN_MASK);
+                led_on = !led_on;
         }
-        
+        if (!UART_OCUPED)
+            {
+                lpuart_transfer_t message = {0};
+
+                if (led_on)
+                {
+                    message.data = encendido;
+                    message.dataSize = sizeof(encendido) - 1U;
+                }
+                else
+                {
+                    message.data = apagado;
+                    message.dataSize = sizeof(apagado) - 1U;
+                }
+
+                UART_OCUPED = true;
+
+                if (LPUART_TransferSendNonBlocking(
+                        LPUART0, &uart_handle, &message)
+                    != kStatus_Success)
+                {
+                    UART_OCUPED = false;
+                }
         }
     }
+}
 

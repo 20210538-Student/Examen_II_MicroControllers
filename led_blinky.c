@@ -27,22 +27,43 @@
  ******************************************************************************/
 
 /*******************************************************************************
- * Variables
+ * Variables del pulsador
  ******************************************************************************/
+static volatile bool check_bton = false;
 
 /*******************************************************************************
- * Code
+ * Variables del UART nonblocking RECEPTOR
  ******************************************************************************/
+static uint8_t texto_run[]   = "RUN\r\n";
+static uint8_t texto_pause[] = "PAUSE\r\n";
+
 static lpuart_handle_t uart_handle; //static para que su memoria siga disponible mientras el driver transmite datos
 static volatile bool UART_OCUPED = false; //volatile para que el compilador no optimice o modifique la variable en la compilacion y la lea siempre de memoria
 
 static uint8_t encendido[] = "ENCENDIDO\r\n";
 static uint8_t apagado[]   = "APAGADO\r\n";
 
+/*******************************************************************************
+ * Variable del CTIMER base del tiepo
+ ******************************************************************************/
+volatile uint32_t tiempo_ms = 0U;
 /*!
  * @brief Main function
  */
-volatile uint32_t tiempo_ms = 0U;
+
+/*******************************************************************************
+ * Code
+ ******************************************************************************/
+void BTON_IRQHANDLER(void)
+{
+    uint32_t flags = GPIO_GpioGetInterruptFlags(BOARD_INITPINS_SW2_GPIO);
+
+    if ((flags & BOARD_INITPINS_SW2_GPIO_PIN_MASK) != 0U)
+    {
+        GPIO_PortClearInterruptFlags(BOARD_INITPINS_SW2_GPIO, BOARD_INITPINS_SW2_GPIO_PIN_MASK);
+        check_bton = true;
+    }
+}
 
 void CTIMER0_TimebaseCB(uint32_t flags) //Base temporal de tiempo en ms
 {
@@ -70,7 +91,7 @@ int main(void)
     GPIO_PinWrite(BOARD_INITPINS_Activity_LED_GPIO, BOARD_INITPINS_Activity_LED_GPIO_PIN, 1U);
     GPIO_PinWrite(BOARD_INITPINS_Alarm_LED_GPIO, BOARD_INITPINS_Alarm_LED_GPIO_PIN, 1U);
     LPUART_TransferCreateHandle(LPUART0, &uart_handle, UART_Callback, NULL);
-
+    
     uint32_t last_change = tiempo_ms;
     uint32_t last_telemetry = tiempo_ms;
     bool led_on = false;

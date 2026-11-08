@@ -71,7 +71,17 @@ instance:
     - interrupt_table:
       - 0: []
       - 1: []
-    - interrupts: []
+      - 2: []
+    - interrupts:
+      - 0:
+        - channelId: 'int_0'
+        - interrupt_t:
+          - IRQn: 'GPIO1_IRQn'
+          - enable_interrrupt: 'enabled'
+          - enable_priority: 'true'
+          - priority: '0'
+          - enable_custom_name: 'true'
+          - handler_custom_name: 'BTON_IRQHANDLER'
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
 /* clang-format on */
 
@@ -270,11 +280,21 @@ static void ADC0_init(void) {
 /***********************************************************************************************************************
  * Initialization functions
  **********************************************************************************************************************/
+static void BOARD_InitPeripherals_CommonPostInit(void)
+{
+  /* Interrupt vector GPIO1_IRQn priority settings in the NVIC. */
+  NVIC_SetPriority(INT_0_IRQN, INT_0_IRQ_PRIORITY);
+  /* Enable interrupt INT_0_IRQN request in the NVIC */
+  EnableIRQ(INT_0_IRQN);
+}
+
 void BOARD_InitPeripherals(void)
 {
   /* Initialize components */
   CTIMER0_init();
   ADC0_init();
+  /* Common post-initialization */
+  BOARD_InitPeripherals_CommonPostInit();
 }
 
 /***********************************************************************************************************************

@@ -22,6 +22,12 @@ extern "C" {
  * Definitions
  **********************************************************************************************************************/
 /* Definitions for BOARD_InitPeripherals functional group */
+/* NVIC interrupt vector ID (number). */
+#define INT_0_IRQN GPIO1_IRQn
+/* NVIC interrupt vector priority. */
+#define INT_0_IRQ_PRIORITY 0
+/* NVIC interrupt handler identifier. */
+#define BTON_IRQHANDLER GPIO1_IRQHandler
 /* Definition of peripheral ID */
 #define CTIMER0_PERIPHERAL CTIMER0
 /* Timer tick frequency in Hz (input frequency of the timer) */

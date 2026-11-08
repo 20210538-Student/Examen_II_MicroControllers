@@ -393,16 +393,6 @@
                   <data type="Version" maxValue="2.10.99">2.8.1</data>
                </feature>
             </dependency>
-            <dependency resourceType="Tool" resourceId="Pins" description="The Pins tool is required by the Peripherals tool, but it is disabled." problem_level="2" source="Peripherals">
-               <feature name="enabled" evaluation="equal">
-                  <data>true</data>
-               </feature>
-            </dependency>
-            <dependency resourceType="Tool" resourceId="Clocks" description="The Clocks tool is required by the Peripherals tool, but it is disabled." problem_level="2" source="Peripherals">
-               <feature name="enabled" evaluation="equal">
-                  <data>true</data>
-               </feature>
-            </dependency>
          </dependencies>
          <generated_project_files>
             <file path="board/peripherals.c" update_enabled="true"/>
@@ -438,8 +428,21 @@
                         <array name="interrupt_table">
                            <struct name="0"/>
                            <struct name="1"/>
+                           <struct name="2"/>
                         </array>
-                        <array name="interrupts"/>
+                        <array name="interrupts">
+                           <struct name="0">
+                              <setting name="channelId" value="int_0"/>
+                              <struct name="interrupt_t">
+                                 <setting name="IRQn" value="GPIO1_IRQn"/>
+                                 <setting name="enable_interrrupt" value="enabled"/>
+                                 <setting name="enable_priority" value="true"/>
+                                 <setting name="priority" value="0"/>
+                                 <setting name="enable_custom_name" value="true"/>
+                                 <setting name="handler_custom_name" value="BTON_IRQHANDLER"/>
+                              </struct>
+                           </struct>
+                        </array>
                      </config_set>
                   </instance>
                   <instance name="CTIMER0" uuid="6ace1337-5b26-4cd1-ac73-1ff4778b7acc" type="ctimer" type_id="ctimer_2.2.2" mode="Capture_Match" peripheral="CTIMER0" enabled="true" comment="" custom_name_enabled="false" editing_lock="false">

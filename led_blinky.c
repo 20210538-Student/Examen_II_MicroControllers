@@ -44,7 +44,7 @@ static uint8_t apagado[]   = "APAGADO\r\n";
  */
 volatile uint32_t tiempo_ms = 0U;
 
-void CTIMER0_TimebaseCB(uint32_t flags)
+void CTIMER0_TimebaseCB(uint32_t flags) //Base temporal de tiempo en ms
 {
     (void)flags;
     tiempo_ms++;
@@ -64,8 +64,7 @@ static void UART_Callback(LPUART_Type *base, lpuart_handle_t *handle, status_t s
 
 int main(void)
 {
-
-    BOARD_InitHardware(); //Inicializacion de hardware y perifericos
+    BOARD_InitHardware(); // Inicializacion de hardware y perifericos
 
     /* Inicializo en bajo. */
     GPIO_PinWrite(BOARD_INITPINS_Activity_LED_GPIO, BOARD_INITPINS_Activity_LED_GPIO_PIN, 1U);
@@ -73,8 +72,9 @@ int main(void)
     LPUART_TransferCreateHandle(LPUART0, &uart_handle, UART_Callback, NULL);
 
     uint32_t last_change = tiempo_ms;
+    uint32_t last_telemetry = tiempo_ms;
     bool led_on = false;
-    
+
     while (1)
     {
         /* Una lectura del contador para esta iteración. */
@@ -87,9 +87,12 @@ int main(void)
             GPIO_PortToggle(
                 BOARD_INITPINS_Activity_LED_GPIO,
                 BOARD_INITPINS_Activity_LED_GPIO_PIN_MASK);
-                led_on = !led_on;
+            led_on = !led_on;
         }
-        if (!UART_OCUPED)
+        if ((uint32_t)(now - last_telemetry) >= 1000U)
+        {
+            last_telemetry += 1000U;
+            if (!UART_OCUPED)
             {
                 lpuart_transfer_t message = {0};
 
@@ -107,12 +110,11 @@ int main(void)
                 UART_OCUPED = true;
 
                 if (LPUART_TransferSendNonBlocking(
-                        LPUART0, &uart_handle, &message)
-                    != kStatus_Success)
+                        LPUART0, &uart_handle, &message) != kStatus_Success)
                 {
                     UART_OCUPED = false;
                 }
+            }
         }
     }
 }
-

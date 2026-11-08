@@ -80,7 +80,7 @@ void ADC0_IRQHandler(void)
 
     while (LPADC_GetConvResult(ADC0, &resultado))
     {
-        adc_value = resultado.convValue;
+        adc_value = (uint16_t)(resultado.convValue >> 3U);
         adc_valid = true;
     }
 }
@@ -158,6 +158,11 @@ static bool SW2_VALID(uint32_t pulse_now)
     return false;
 }
 
+static uint32_t ADC_Porcentaje(uint16_t lectura) // Convierte la lectura del ADC a porcentaje de 0 a 100
+{
+    return ((uint32_t)lectura * 100U + 2047U) / 4095U;
+}
+
 int main(void)
 {
     BOARD_InitHardware(); // Inicializacion de hardware y perifericos
@@ -217,9 +222,10 @@ int main(void)
             if (!mode_pending && !UART_OCUPED && adc_valid)
             {
                 uint16_t muestra = adc_value;
+                uint32_t porcentaje = ADC_Porcentaje(muestra);
 
-                int longitud = snprintf((char *)texto_adc, sizeof(texto_adc), "ADC=%u\r\n", (unsigned int)muestra);
-
+                int longitud = snprintf((char *)texto_adc, sizeof(texto_adc), "ADC=%u; PCT=%u\r\n", (unsigned int)muestra, (unsigned int)porcentaje);
+                
                 if ((longitud > 0) &&
                     ((size_t)longitud < sizeof(texto_adc)))
                 {

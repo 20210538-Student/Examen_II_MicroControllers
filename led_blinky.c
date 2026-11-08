@@ -30,7 +30,8 @@
  * Variables del pulsador
  ******************************************************************************/
 static volatile bool check_bton = false;
-
+static bool mode_run = true;
+static bool mode_pending = false;
 /*******************************************************************************
  * Variables del UART nonblocking RECEPTOR
  ******************************************************************************/
@@ -65,6 +66,7 @@ void BTON_IRQHANDLER(void)
     }
 }
 
+
 void CTIMER0_TimebaseCB(uint32_t flags) //Base temporal de tiempo en ms
 {
     (void)flags;
@@ -81,6 +83,61 @@ static void UART_Callback(LPUART_Type *base, lpuart_handle_t *handle, status_t s
     {
         UART_OCUPED = false;
     }
+}
+
+static bool UART_sendtext(uint8_t *texto)
+{
+    if (UART_OCUPED || texto[0] == '\0')
+    {
+        return false;
+    }
+
+    lpuart_transfer_t message = {0};
+    message.data = texto;
+    message.dataSize = strlen((const char *)texto);
+
+    UART_OCUPED = true;
+
+    if (LPUART_TransferSendNonBlocking(
+            LPUART0, &uart_handle, &message) != kStatus_Success)
+    {
+        UART_OCUPED = false;
+        return false;
+    }
+
+    return true;
+}
+static bool SW2_VALID(uint32_t pulse_now)
+{
+    static uint32_t last_state = 1U;
+    static uint32_t stable = 1U;
+    static uint32_t from = 0U;
+
+    if (!check_bton)
+    {
+        return false;
+    }
+
+    uint32_t lectura = GPIO_PinRead(BOARD_INITPINS_SW2_GPIO, BOARD_INITPINS_SW2_GPIO_PIN);
+
+    if (lectura != last_state)
+    {
+        last_state = lectura;
+        from = pulse_now;
+    }
+
+    if ((lectura != stable) &&
+        ((uint32_t)(pulse_now - from) >= 30U))
+    {
+        stable = lectura;
+
+        if (stable == 0U)
+        {
+            return true;  /* Pulsación confirmada. */
+        }
+    }
+
+    return false;
 }
 
 int main(void)
@@ -100,6 +157,19 @@ int main(void)
     {
         /* Una lectura del contador para esta iteración. */
         uint32_t now = tiempo_ms;
+        if (SW2_VALID(now))
+        {
+            mode_run = !mode_run;
+            mode_pending = true;
+        }
+
+        if (mode_pending)
+            {
+                if (UART_sendtext(mode_run ? texto_run : texto_pause))
+                {
+                    mode_pending = false;
+                }
+            }
 
         if ((uint32_t)(now - last_change) >= 500U)
         {

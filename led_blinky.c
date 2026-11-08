@@ -148,7 +148,7 @@ int main(void)
     GPIO_PinWrite(BOARD_INITPINS_Activity_LED_GPIO, BOARD_INITPINS_Activity_LED_GPIO_PIN, 1U);
     GPIO_PinWrite(BOARD_INITPINS_Alarm_LED_GPIO, BOARD_INITPINS_Alarm_LED_GPIO_PIN, 1U);
     LPUART_TransferCreateHandle(LPUART0, &uart_handle, UART_Callback, NULL);
-    
+
     uint32_t last_change = tiempo_ms;
     uint32_t last_telemetry = tiempo_ms;
     bool led_on = false;
@@ -157,6 +157,7 @@ int main(void)
     {
         /* Una lectura del contador para esta iteración. */
         uint32_t now = tiempo_ms;
+
         if (SW2_VALID(now))
         {
             mode_run = !mode_run;
@@ -164,12 +165,12 @@ int main(void)
         }
 
         if (mode_pending)
+        {
+            if (UART_sendtext(mode_run ? texto_run : texto_pause))
             {
-                if (UART_sendtext(mode_run ? texto_run : texto_pause))
-                {
-                    mode_pending = false;
-                }
+                mode_pending = false;
             }
+        }
 
         if ((uint32_t)(now - last_change) >= 500U)
         {
@@ -180,31 +181,13 @@ int main(void)
                 BOARD_INITPINS_Activity_LED_GPIO_PIN_MASK);
             led_on = !led_on;
         }
+
         if ((uint32_t)(now - last_telemetry) >= 1000U)
         {
             last_telemetry += 1000U;
-            if (!UART_OCUPED)
+            if (!mode_pending)
             {
-                lpuart_transfer_t message = {0};
-
-                if (led_on)
-                {
-                    message.data = encendido;
-                    message.dataSize = sizeof(encendido) - 1U;
-                }
-                else
-                {
-                    message.data = apagado;
-                    message.dataSize = sizeof(apagado) - 1U;
-                }
-
-                UART_OCUPED = true;
-
-                if (LPUART_TransferSendNonBlocking(
-                        LPUART0, &uart_handle, &message) != kStatus_Success)
-                {
-                    UART_OCUPED = false;
-                }
+                UART_sendtext(led_on ? encendido : apagado);
             }
         }
     }

@@ -12,6 +12,7 @@
 #include "fsl_common.h"
 #include "fsl_ctimer.h"
 #include "fsl_clock.h"
+#include "fsl_lpadc.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -35,12 +36,27 @@ extern "C" {
 #define CTIMER0_TIMER_IRQN CTIMER0_IRQn
 /* CTIMER0 interrupt vector priority. */
 #define CTIMER0_TIMER_IRQ_PRIORITY 2
+/* Alias for ADC0 peripheral */
+#define ADC0_PERIPHERAL ADC0
+/* ADC0 interrupt vector ID (number). */
+#define ADC0_IRQN ADC0_IRQn
+/* ADC0 interrupt vector priority. */
+#define ADC0_IRQ_PRIORITY 3
+/* ADC0 interrupt handler identifier. */
+#define ADC0_IRQHANDLER ADC0_IRQHandler
+/* Command 1 - ADC_Pot */
+#define ADC0_ADC_POT 1U
+/* Trigger 0 - Pot_Trigger */
+#define ADC0_POT_TRIGGER 0U
 
 /***********************************************************************************************************************
  * Global variables
  **********************************************************************************************************************/
 extern const ctimer_config_t CTIMER0_config;
 extern const ctimer_match_config_t CTIMER0_Match_0_config;
+extern const lpadc_config_t ADC0_config;
+extern lpadc_conv_command_config_t ADC0_commandsConfig[1];
+extern lpadc_conv_trigger_config_t ADC0_triggersConfig[1];
 
 /***********************************************************************************************************************
  * Callback functions

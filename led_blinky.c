@@ -13,6 +13,9 @@
 #include "clock_config.h"
 #include "peripherals.h"
 #include "fsl_ctimer.h"
+#include "fsl_lpadc.h"
+#include <stdint.h>
+#include <stdbool.h>
 
 /*******************************************************************************
  * Definitions
@@ -43,10 +46,28 @@ void CTIMER0_TimebaseCB(uint32_t flags)
 
 int main(void)
 {
-    /* Board pin init */
-    BOARD_InitHardware();
+
+    BOARD_InitHardware(); //Inicializacion de hardware y perifericos
+
+    /* Inicializo en bajo. */
+    GPIO_PinWrite(BOARD_INITPINS_Activity_LED_GPIO, BOARD_INITPINS_Activity_LED_GPIO_PIN, 1U);
+    GPIO_PinWrite(BOARD_INITPINS_Alarm_LED_GPIO, BOARD_INITPINS_Alarm_LED_GPIO_PIN, 1U);
+    uint32_t last_change = tiempo_ms;
 
     while (1)
     {
+        /* Una lectura del contador para esta iteración. */
+        uint32_t now = tiempo_ms;
+
+        if ((uint32_t)(now - last_change) >= 500U)
+        {
+            last_change += 500U;
+
+            GPIO_PortToggle(
+                BOARD_INITPINS_Activity_LED_GPIO,
+                BOARD_INITPINS_Activity_LED_GPIO_PIN_MASK);
+        }
+        
+        }
     }
-}
+

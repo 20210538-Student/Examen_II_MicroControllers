@@ -14,7 +14,7 @@ mcu_data: ksdk2_0
 processor_version: 26.06.20
 pin_labels:
 - {pin_num: '63', pin_signal: P3_12/LPUART2_RTS_B/LPUART3_TXD/CT1_MAT2/PWM0_X0/FLEXIO0_D20/PWM1_A2, label: LED_RED, identifier: LED_RED}
-- {pin_num: '62', pin_signal: P3_13/LPUART2_CTS_B/LPUART3_RXD/CT1_MAT3/PWM0_X1/FLEXIO0_D21/PWM1_B2, label: GREEN_LED, identifier: GREEN_LED}
+- {pin_num: '62', pin_signal: P3_13/LPUART2_CTS_B/LPUART3_RXD/CT1_MAT3/PWM0_X1/FLEXIO0_D21/PWM1_B2, label: Activity_LED, identifier: GREEN_LED;activity_Led;Activity_Led;Activity_LED}
 - {pin_num: '78', pin_signal: P0_2/TDO/SWO/LPUART0_RXD/LPSPI0_SCK/CT0_MAT0/UTICK_CAP0/FLEXIO0_D2, label: RX, identifier: Rx}
 - {pin_num: '79', pin_signal: P0_3/TDI/LPUART0_TXD/LPSPI0_SDO/CT0_MAT1/UTICK_CAP1/FLEXIO0_D3/CMP0_OUT, label: TX, identifier: Tx;TX}
 - {pin_num: '36', pin_signal: P2_15/TRIG_OUT4/LPSPI1_SDI/LPUART1_RTS_B/CT4_MAT3/CT0_MAT2/FLEXIO0_D23, label: ADC_pin, identifier: ADC_CH;ADC_pin}
@@ -46,8 +46,9 @@ void BOARD_InitBootPins(void)
 BOARD_InitPins:
 - options: {callFromInitBoot: 'true', coreID: cm33_core0, enableClock: 'true'}
 - pin_list:
-  - {pin_num: '62', peripheral: GPIO3, signal: 'GPIO, 13', pin_signal: P3_13/LPUART2_CTS_B/LPUART3_RXD/CT1_MAT3/PWM0_X1/FLEXIO0_D21/PWM1_B2, direction: OUTPUT, gpio_init_state: 'true',
-    slew_rate: fast, open_drain: disable, drive_strength: low, pull_select: up, pull_enable: enable, input_buffer: enable, invert_input: normal}
+  - {pin_num: '62', peripheral: GPIO3, signal: 'GPIO, 13', pin_signal: P3_13/LPUART2_CTS_B/LPUART3_RXD/CT1_MAT3/PWM0_X1/FLEXIO0_D21/PWM1_B2, identifier: Activity_LED,
+    direction: OUTPUT, gpio_init_state: 'true', slew_rate: fast, open_drain: disable, drive_strength: low, pull_select: up, pull_enable: enable, input_buffer: enable,
+    invert_input: normal}
   - {pin_num: '78', peripheral: LPUART0, signal: RX, pin_signal: P0_2/TDO/SWO/LPUART0_RXD/LPSPI0_SCK/CT0_MAT0/UTICK_CAP0/FLEXIO0_D2, pull_enable: enable}
   - {pin_num: '79', peripheral: LPUART0, signal: TX, pin_signal: P0_3/TDI/LPUART0_TXD/LPSPI0_SDO/CT0_MAT1/UTICK_CAP1/FLEXIO0_D3/CMP0_OUT, identifier: TX}
   - {pin_num: '53', peripheral: GPIO3, signal: 'GPIO, 22', pin_signal: P3_22/LPUART1_RTS_B/CT_INP10/FLEXIO0_D30/PWM1_X2, direction: OUTPUT, gpio_init_state: 'true',
@@ -145,30 +146,30 @@ void BOARD_InitPins(void)
                       /* Input Buffer Enable: Disables. */
                       | PORT_PCR_IBE(PCR_IBE_ibe0));
 
-    const port_pin_config_t GREEN_LED = {/* Internal pull-up resistor is enabled */
-                                         .pullSelect = kPORT_PullUp,
-                                         /* Low internal pull resistor value is selected. */
-                                         .pullValueSelect = kPORT_LowPullResistor,
-                                         /* Fast slew rate is configured */
-                                         .slewRate = kPORT_FastSlewRate,
-                                         /* Passive input filter is disabled */
-                                         .passiveFilterEnable = kPORT_PassiveFilterDisable,
-                                         /* Open drain output is disabled */
-                                         .openDrainEnable = kPORT_OpenDrainDisable,
-                                         /* Low drive strength is configured */
-                                         .driveStrength = kPORT_LowDriveStrength,
-                                         /* Normal drive strength is configured */
-                                         .driveStrength1 = kPORT_NormalDriveStrength,
-                                         /* Pin is configured as P3_13 */
-                                         .mux = kPORT_MuxAlt0,
-                                         /* Digital input enabled */
-                                         .inputBuffer = kPORT_InputBufferEnable,
-                                         /* Digital input is not inverted */
-                                         .invertInput = kPORT_InputNormal,
-                                         /* Pin Control Register fields [15:0] are not locked */
-                                         .lockRegister = kPORT_UnlockRegister};
+    const port_pin_config_t Activity_LED = {/* Internal pull-up resistor is enabled */
+                                            .pullSelect = kPORT_PullUp,
+                                            /* Low internal pull resistor value is selected. */
+                                            .pullValueSelect = kPORT_LowPullResistor,
+                                            /* Fast slew rate is configured */
+                                            .slewRate = kPORT_FastSlewRate,
+                                            /* Passive input filter is disabled */
+                                            .passiveFilterEnable = kPORT_PassiveFilterDisable,
+                                            /* Open drain output is disabled */
+                                            .openDrainEnable = kPORT_OpenDrainDisable,
+                                            /* Low drive strength is configured */
+                                            .driveStrength = kPORT_LowDriveStrength,
+                                            /* Normal drive strength is configured */
+                                            .driveStrength1 = kPORT_NormalDriveStrength,
+                                            /* Pin is configured as P3_13 */
+                                            .mux = kPORT_MuxAlt0,
+                                            /* Digital input enabled */
+                                            .inputBuffer = kPORT_InputBufferEnable,
+                                            /* Digital input is not inverted */
+                                            .invertInput = kPORT_InputNormal,
+                                            /* Pin Control Register fields [15:0] are not locked */
+                                            .lockRegister = kPORT_UnlockRegister};
     /* PORT3_13 (pin 62) is configured as P3_13 */
-    PORT_SetPinConfig(BOARD_INITPINS_GREEN_LED_PORT, BOARD_INITPINS_GREEN_LED_PIN, &GREEN_LED);
+    PORT_SetPinConfig(BOARD_INITPINS_Activity_LED_PORT, BOARD_INITPINS_Activity_LED_PIN, &Activity_LED);
 
     PORT3->PCR[22] = ((PORT3->PCR[22] &
                        /* Mask bits to zero which are setting */
@@ -193,12 +194,12 @@ void BOARD_InitPins(void)
     /* Initialize GPIO functionality on pin PIO1_7 (pin 100)  */
     GPIO_PinInit(BOARD_INITPINS_SW2_GPIO, BOARD_INITPINS_SW2_PIN, &SW2_config);
 
-    gpio_pin_config_t GREEN_LED_config = {
+    gpio_pin_config_t Activity_LED_config = {
         .pinDirection = kGPIO_DigitalOutput,
         .outputLogic = 1U
     };
     /* Initialize GPIO functionality on pin PIO3_13 (pin 62)  */
-    GPIO_PinInit(BOARD_INITPINS_GREEN_LED_GPIO, BOARD_INITPINS_GREEN_LED_PIN, &GREEN_LED_config);
+    GPIO_PinInit(BOARD_INITPINS_Activity_LED_GPIO, BOARD_INITPINS_Activity_LED_PIN, &Activity_LED_config);
 
     gpio_pin_config_t Alarm_LED_config = {
         .pinDirection = kGPIO_DigitalOutput,

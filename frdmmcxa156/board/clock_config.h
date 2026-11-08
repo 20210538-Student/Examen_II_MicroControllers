@@ -39,7 +39,7 @@ void BOARD_InitBootClocks(void);
 #define BOARD_BOOTCLOCKFRO12M_CORE_CLOCK           12000000U  /*!< Core clock frequency: 12000000Hz */
 
 /* Clock outputs (values are in Hz): */
-#define BOARD_BOOTCLOCKFRO12M_ADC0_CLOCK              0UL            /* Clock consumers of ADC0_clock output : ADC0 */
+#define BOARD_BOOTCLOCKFRO12M_ADC0_CLOCK              12000000UL     /* Clock consumers of ADC0_clock output : ADC0 */
 #define BOARD_BOOTCLOCKFRO12M_ADC1_CLOCK              0UL            /* Clock consumers of ADC1_clock output : ADC1 */
 #define BOARD_BOOTCLOCKFRO12M_CLK16K_0_CLOCK          0UL            /* Clock consumers of CLK16K_0_clock output : CMP0, WAKETIMER0, WUU0 */
 #define BOARD_BOOTCLOCKFRO12M_CLK16K_1_CLOCK          0UL            /* Clock consumers of CLK16K_1_clock output : CMP1, LPTMR0, WAKETIMER0 */

@@ -32,20 +32,20 @@ void BOARD_InitBootPins(void);
 #define PORT2_PCR15_MUX_mux00 0x00u /*!<@brief Pin Multiplex Control: Alternative 0 (GPIO) */
 #define PORT3_PCR22_MUX_mux00 0x00u /*!<@brief Pin Multiplex Control: Alternative 0 (GPIO) */
 
-/*! @name PORT3_13 (number 62), GREEN_LED
+/*! @name PORT3_13 (number 62), Activity_LED
   @{ */
 
 /* Symbols to be used with GPIO driver */
-#define BOARD_INITPINS_GREEN_LED_GPIO GPIO3                /*!<@brief GPIO peripheral base pointer */
-#define BOARD_INITPINS_GREEN_LED_INIT_GPIO_VALUE 1U        /*!<@brief GPIO output initial state */
-#define BOARD_INITPINS_GREEN_LED_GPIO_PIN 13U              /*!<@brief GPIO pin number */
-#define BOARD_INITPINS_GREEN_LED_GPIO_PIN_MASK (1U << 13U) /*!<@brief GPIO pin mask */
+#define BOARD_INITPINS_Activity_LED_GPIO GPIO3                /*!<@brief GPIO peripheral base pointer */
+#define BOARD_INITPINS_Activity_LED_INIT_GPIO_VALUE 1U        /*!<@brief GPIO output initial state */
+#define BOARD_INITPINS_Activity_LED_GPIO_PIN 13U              /*!<@brief GPIO pin number */
+#define BOARD_INITPINS_Activity_LED_GPIO_PIN_MASK (1U << 13U) /*!<@brief GPIO pin mask */
 
 /* Symbols to be used with PORT driver */
-#define BOARD_INITPINS_GREEN_LED_PORT PORT3                /*!<@brief PORT peripheral base pointer */
-#define BOARD_INITPINS_GREEN_LED_PIN 13U                   /*!<@brief PORT pin number */
-#define BOARD_INITPINS_GREEN_LED_PIN_MASK (1U << 13U)      /*!<@brief PORT pin mask */
-                                                           /* @} */
+#define BOARD_INITPINS_Activity_LED_PORT PORT3                /*!<@brief PORT peripheral base pointer */
+#define BOARD_INITPINS_Activity_LED_PIN 13U                   /*!<@brief PORT pin number */
+#define BOARD_INITPINS_Activity_LED_PIN_MASK (1U << 13U)      /*!<@brief PORT pin mask */
+                                                              /* @} */
 
 /*! @name PORT0_2 (number 78), RX
   @{ */

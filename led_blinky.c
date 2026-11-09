@@ -45,12 +45,19 @@ static bool mode_pending = false;
  * Variables del UART nonblocking RECEPTOR
  ******************************************************************************/
 static uint8_t rx_buffer[128];
+static char comando_rx[33];
+static size_t comando_longitud = 0U;
+static bool comando_descartar = false;
+static bool comando_cr = false;
 /*******************************************************************************
  * Variables del UART nonblocking TRANSMISOR
  ******************************************************************************/
 static uint8_t texto_run[]   = "RUN\r\n";
 static uint8_t texto_pause[] = "PAUSE\r\n";
-
+static uint8_t respuesta_uart[160];
+static bool respuesta_pendiente = false;
+static uint32_t umbral = 70U;
+static bool alarma_encendida = false;
 static lpuart_handle_t uart_handle; //static para que su memoria siga disponible mientras el driver transmite datos
 static volatile bool UART_OCUPED = false; //volatile para que el compilador no optimice o modifique la variable en la compilacion y la lea siempre de memoria
 
@@ -174,43 +181,281 @@ static bool SW2_VALID(uint32_t pulse_now)
     return false;
 }
 
+static void Alarma_Set(bool encender)
+{
+    alarma_encendida = encender;
+
+    /* LED activo en bajo. */
+    GPIO_PinWrite(
+        BOARD_INITPINS_Alarm_LED_GPIO,
+        BOARD_INITPINS_Alarm_LED_GPIO_PIN,
+        encender ? 0U : 1U);
+}
+
+/* Usar al entrar en RUN o cambiar THR. */
+static void Alarma_Reevaluar(void)
+{
+    Alarma_Set(
+        mode_run &&
+        adc_valid &&
+        porcentaje >= umbral);
+}
+
+static void Modo_Set(bool ejecutar)
+{
+    bool estaba_en_run = mode_run;
+    mode_run = ejecutar;
+
+    if (!mode_run)
+    {
+        Alarma_Set(false);
+    }
+    else if (!estaba_en_run)
+    {
+        Alarma_Reevaluar();
+    }
+}
+
+/* Funcionamiento normal con histéresis. */
+static void Alarma_Actualizar(void)
+{
+    if (!mode_run)
+    {
+        Alarma_Set(false);
+        return;
+    }
+
+    if (!adc_valid)
+    {
+        return;
+    }
+
+    uint32_t pct = porcentaje;
+
+    if (pct >= umbral)
+    {
+        Alarma_Set(true);
+    }
+    else if (pct < (umbral - 5U))
+    {
+        Alarma_Set(false);
+    }
+}
+
+static void UART_PrepararRespuesta(const char *texto)
+{
+    int longitud = snprintf(
+        (char *)respuesta_uart,
+        sizeof(respuesta_uart),
+        "%s\r\n",
+        texto);
+
+    respuesta_pendiente =
+        (longitud > 0) &&
+        ((size_t)longitud < sizeof(respuesta_uart));
+}
+
+static void UART_PrepararEstado(void)
+{
+    uint16_t lectura;
+    uint32_t pct;
+    uint32_t instante;
+
+    uint32_t irq_previo = __get_PRIMASK();
+    __disable_irq();
+
+    lectura = adc_value;
+    pct = porcentaje;
+    instante = tiempo_ms;
+
+    __set_PRIMASK(irq_previo);
+
+    int longitud = snprintf(
+        (char *)respuesta_uart,
+        sizeof(respuesta_uart),
+        "t=%lu;ADC=%u;PCT=%lu;THR=%lu;MODE=%s;ALARM=%u\r\n",
+        (unsigned long)instante,
+        (unsigned int)lectura,
+        (unsigned long)pct,
+        (unsigned long)umbral,
+        mode_run ? "RUN" : "PAUSE",
+        alarma_encendida ? 1U : 0U);
+
+    respuesta_pendiente =
+        (longitud > 0) &&
+        ((size_t)longitud < sizeof(respuesta_uart));
+}
+
+static void UART_ProcesarComando(const char *comando)
+{
+    if (strcmp(comando, "STATUS") == 0)
+    {
+        UART_PrepararEstado();
+    }
+    else if (strcmp(comando, "START") == 0)
+    {
+        Modo_Set(true);
+        UART_PrepararRespuesta("OK RUN");
+    }
+    else if (strcmp(comando, "STOP") == 0)
+    {
+        Modo_Set(false);
+        UART_PrepararRespuesta("OK PAUSE");
+    }
+    else if (strncmp(comando, "THR ", 4U) == 0)
+    {
+        const char *digito = comando + 4U;
+        uint32_t nuevo_umbral = 0U;
+
+        if (*digito == '\0')
+        {
+            UART_PrepararRespuesta("ERR");
+            return;
+        }
+
+        while (*digito != '\0')
+        {
+            if ((*digito < '0') || (*digito > '9'))
+            {
+                UART_PrepararRespuesta("ERR");
+                return;
+            }
+
+            nuevo_umbral =
+                nuevo_umbral * 10U + (uint32_t)(*digito - '0');
+
+            /* También evita desbordar al recibir muchos dígitos. */
+            if (nuevo_umbral > 95U)
+            {
+                UART_PrepararRespuesta("ERR");
+                return;
+            }
+
+            digito++;
+        }
+
+        if (nuevo_umbral < 10U)
+        {
+            UART_PrepararRespuesta("ERR");
+            return;
+        }
+
+        /* Modificar únicamente después de validar todo. */
+        bool cambio = (umbral != nuevo_umbral);
+        umbral = nuevo_umbral;
+
+        if (cambio)
+        {
+            Alarma_Reevaluar();
+        }
+
+        int longitud = snprintf(
+            (char *)respuesta_uart,
+            sizeof(respuesta_uart),
+            "OK THR=%lu\r\n",
+            (unsigned long)umbral);
+
+        respuesta_pendiente =(longitud > 0) && ((size_t)longitud < sizeof(respuesta_uart));
+    }
+    else
+    {
+        UART_PrepararRespuesta("ERR");
+    }
+}
+
 static void UART_write_text(void)
 {
-    static uint8_t eco[2] = {0};
-    static bool eco_pendiente = false;
 
     if (mode_pending || UART_OCUPED)
     {
         return;
     }
 
-    if (!eco_pendiente &&
-        LPUART_TransferGetRxRingBufferLength(
-            LPUART0, &uart_handle) > 0U)
+    if (respuesta_pendiente)
     {
-        lpuart_transfer_t recepcion = {0};
-        size_t recibidos = 0U;
-
-        recepcion.data = eco;
-        recepcion.dataSize = 1U;
-
-        status_t resultado = LPUART_TransferReceiveNonBlocking(
-            LPUART0, &uart_handle, &recepcion, &recibidos);
-
-        if ((resultado == kStatus_Success) && (recibidos == 1U))
+        if (UART_sendtext(respuesta_uart))
         {
-            eco[1] = '\0';
-            eco_pendiente = (eco[0] != '\0');
+            respuesta_pendiente = false;
         }
+
+        return;
     }
 
-    if (eco_pendiente)
+    if (LPUART_TransferGetRxRingBufferLength(
+            LPUART0, &uart_handle) == 0U)
     {
-        if (UART_sendtext(eco))
-        {
-            eco_pendiente = false;
-        }
+        return;
     }
+
+    uint8_t caracter;
+    size_t recibidos = 0U;
+
+    lpuart_transfer_t recepcion = {0};
+    recepcion.data = &caracter;
+    recepcion.dataSize = 1U;
+
+    status_t resultado = LPUART_TransferReceiveNonBlocking(
+        LPUART0, &uart_handle, &recepcion, &recibidos);
+
+    if ((resultado != kStatus_Success) || (recibidos != 1U))
+    {
+        return;
+    }
+
+    if (caracter == '\n')
+    {
+        if (comando_descartar)
+        {
+            UART_PrepararRespuesta("ERR");
+        }
+        else if (comando_longitud > 0U)
+        {
+            comando_rx[comando_longitud] = '\0';
+            UART_ProcesarComando(comando_rx);
+        }
+
+        /* Una línea vacía se ignora. */
+        comando_longitud = 0U;
+        comando_descartar = false;
+        comando_cr = false;
+
+        if (respuesta_pendiente &&
+            UART_sendtext(respuesta_uart))
+        {
+            respuesta_pendiente = false;
+        }
+
+        return;
+    }
+
+    if (comando_descartar)
+    {
+        return;
+    }
+
+    /* Después de CR solamente se permite LF. */
+    if (comando_cr)
+    {
+        comando_descartar = true;
+        return;
+    }
+
+    if (caracter == '\r')
+    {
+        comando_cr = true;
+        return;
+    }
+
+    if ((caracter < 32U) ||
+        (caracter > 126U) ||
+        (comando_longitud >= 32U))
+    {
+        /* Descartar el resto de la línea hasta LF. */
+        comando_descartar = true;
+        return;
+    }
+
+    comando_rx[comando_longitud++] = (char)caracter;
 }
 
 
@@ -238,7 +483,7 @@ int main(void)
         
         if (SW2_VALID(now))
         {
-            mode_run = !mode_run;
+            Modo_Set(!mode_run);
             mode_pending = true;
         }
 
@@ -272,7 +517,7 @@ int main(void)
         {
             last_telemetry += 1000U;
 
-            if (!mode_pending && !UART_OCUPED && adc_valid)
+            if (!mode_pending && !respuesta_pendiente && !UART_OCUPED && adc_valid)
             {
             int longitud = snprintf(
             (char *)texto_adc,
@@ -288,6 +533,7 @@ int main(void)
                 }
             }
         }
+        Alarma_Actualizar();
         UART_write_text();
     }
 }

@@ -44,6 +44,7 @@ static bool mode_pending = false;
 /*******************************************************************************
  * Variables del UART nonblocking RECEPTOR
  ******************************************************************************/
+static uint32_t telemetrias_pendientes = 0U;
 static uint8_t rx_buffer[128];
 static char comando_rx[33];
 static size_t comando_longitud = 0U;
@@ -363,6 +364,37 @@ static void UART_ProcesarComando(const char *comando)
     }
 }
 
+static bool UART_FormatearEstado(uint8_t *destino, size_t capacidad)
+{
+    uint16_t lectura;
+    uint32_t pct;
+    uint32_t instante;
+
+    /* Copiar ADC y porcentaje de la misma muestra. */
+    uint32_t irq_previo = __get_PRIMASK();
+    __disable_irq();
+
+    lectura = adc_value;
+    pct = porcentaje;
+    instante = tiempo_ms;
+
+    __set_PRIMASK(irq_previo);
+
+    int longitud = snprintf(
+        (char *)destino,
+        capacidad,
+        "t=%lu;ADC=%u;PCT=%lu;THR=%lu;MODE=%s;ALARM=%u\r\n",
+        (unsigned long)instante,
+        (unsigned int)lectura,
+        (unsigned long)pct,
+        (unsigned long)umbral,
+        mode_run ? "RUN" : "PAUSE",
+        alarma_encendida ? 1U : 0U);
+
+    return (longitud > 0) &&
+           ((size_t)longitud < capacidad);
+}
+
 static void UART_write_text(void)
 {
 
@@ -458,7 +490,6 @@ static void UART_write_text(void)
     comando_rx[comando_longitud++] = (char)caracter;
 }
 
-
 int main(void)
 {
     BOARD_InitHardware(); // Inicializacion de hardware y perifericos
@@ -480,7 +511,7 @@ int main(void)
     {
         /* Una lectura del contador para esta iteración. */
         uint32_t now = tiempo_ms;
-        
+
         if (SW2_VALID(now))
         {
             Modo_Set(!mode_run);
@@ -513,27 +544,32 @@ int main(void)
             LPADC_DoSoftwareTrigger(ADC0, 1UL << 0);
         }
 
-        if ((uint32_t)(now - last_telemetry) >= 1000U)
+        /* Registrar los periodos de telemetría que se hayan cumplido. */
+        uint32_t transcurrido = (uint32_t)(now - last_telemetry);
+
+        if (transcurrido >= 1000U)
         {
-            last_telemetry += 1000U;
+            uint32_t periodos = transcurrido / 1000U;
 
-            if (!mode_pending && !respuesta_pendiente && !UART_OCUPED && adc_valid)
-            {
-            int longitud = snprintf(
-            (char *)texto_adc,
-            sizeof(texto_adc),
-            "ADC=%u;PCT=%u\r\n",
-            (unsigned int)adc_value,
-            (unsigned int)porcentaje);
-
-                if ((longitud > 0) &&
-                    ((size_t)longitud < sizeof(texto_adc)))
-                {
-                    UART_sendtext(texto_adc);
-                }
-            }
+            last_telemetry += periodos * 1000U;
+            telemetrias_pendientes += periodos;
         }
         Alarma_Actualizar();
         UART_write_text();
+        
+        if ((telemetrias_pendientes > 0U) &&
+            !mode_pending &&
+            !respuesta_pendiente &&
+            !UART_OCUPED &&
+            adc_valid)
+        {
+            if (UART_FormatearEstado(texto_adc, sizeof(texto_adc)))
+            {
+                if (UART_sendtext(texto_adc))
+                {
+                    telemetrias_pendientes--;
+                }
+            }
+        }
     }
 }

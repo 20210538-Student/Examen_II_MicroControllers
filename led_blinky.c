@@ -33,7 +33,7 @@
  ******************************************************************************/
 static volatile uint16_t adc_value = 0U;
 static volatile bool adc_valid = false;
-
+static volatile uint32_t porcentaje = 0U;
 static uint8_t texto_adc[160];
 /*******************************************************************************
  * Variables del pulsador
@@ -82,7 +82,10 @@ void ADC0_IRQHandler(void)
 
     while (LPADC_GetConvResult(ADC0, &resultado))
     {
-        adc_value = (uint16_t)(resultado.convValue >> 3U);
+        uint16_t lectura = (uint16_t)(resultado.convValue >> 3U);
+
+        adc_value = lectura;
+        porcentaje = ((uint32_t)lectura * 100U + 2047U) / 4095U;
         adc_valid = true;
     }
 }
@@ -210,10 +213,6 @@ static void UART_write_text(void)
     }
 }
 
-static uint32_t ADC_Porcentaje(uint16_t lectura) // Convierte la lectura del ADC a porcentaje de 0 a 100
-{
-    return ((uint32_t)lectura * 100U + 2047U) / 4095U;
-}
 
 int main(void)
 {
@@ -236,7 +235,7 @@ int main(void)
     {
         /* Una lectura del contador para esta iteración. */
         uint32_t now = tiempo_ms;
-
+        
         if (SW2_VALID(now))
         {
             mode_run = !mode_run;
@@ -265,7 +264,6 @@ int main(void)
         if ((uint32_t)(now - last_adc) >= 100U)
         {
             last_adc += 100U;
-
             /* Trigger 0 -> comando 1 -> entrada A2 / P2_15. */
             LPADC_DoSoftwareTrigger(ADC0, 1UL << 0);
         }
@@ -276,14 +274,11 @@ int main(void)
 
             if (!mode_pending && !UART_OCUPED && adc_valid)
             {
-                uint16_t muestra = adc_value;
-                uint32_t porcentaje = ADC_Porcentaje(muestra);
-
             int longitud = snprintf(
             (char *)texto_adc,
             sizeof(texto_adc),
             "ADC=%u;PCT=%u\r\n",
-            (unsigned int)muestra,
+            (unsigned int)adc_value,
             (unsigned int)porcentaje);
 
                 if ((longitud > 0) &&

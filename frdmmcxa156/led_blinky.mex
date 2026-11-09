@@ -162,6 +162,7 @@
                   <clock_output id="CPU_clock.outFreq" value="12 MHz" locked="false" accuracy=""/>
                   <clock_output id="CTIMER0_clock.outFreq" value="12 MHz" locked="false" accuracy=""/>
                   <clock_output id="FRO_12M_clock.outFreq" value="12 MHz" locked="false" accuracy=""/>
+                  <clock_output id="LPUART0_clock.outFreq" value="12 MHz" locked="false" accuracy=""/>
                   <clock_output id="MAIN_clock.outFreq" value="12 MHz" locked="false" accuracy=""/>
                   <clock_output id="Slow_clock.outFreq" value="3 MHz" locked="false" accuracy=""/>
                   <clock_output id="System_clock.outFreq" value="12 MHz" locked="false" accuracy=""/>
@@ -174,10 +175,12 @@
                   <setting id="ADC0CLKDIV_HALT" value="Enable" locked="false"/>
                   <setting id="CTIMER0CLKDIV_HALT" value="Enable" locked="false"/>
                   <setting id="FRO_HF_PERIPHERALS_EN_CFG" value="Disabled" locked="false"/>
+                  <setting id="LPUART0CLKDIV_HALT" value="Enable" locked="false"/>
                   <setting id="MRCC.ADC0CLKSEL.sel" value="SCG.FRO_12M" locked="false"/>
                   <setting id="MRCC.CTIMER0CLKSEL.sel" value="SCG.FRO_12M" locked="false"/>
                   <setting id="MRCC.FREQMEREFCLKSEL.sel" value="MRCC.aoi0_out0" locked="false"/>
                   <setting id="MRCC.FREQMETARGETCLKSEL.sel" value="MRCC.aoi0_out0" locked="false"/>
+                  <setting id="MRCC.LPUART0CLKSEL.sel" value="SCG.FRO_12M" locked="false"/>
                   <setting id="MRCC.OSTIMERCLKSEL.sel" value="VBAT.CLK16K_1" locked="false"/>
                   <setting id="SCG.SCSSEL.sel" value="SCG.SIRC" locked="false"/>
                   <setting id="SCG_FIRCCSR_FIRCEN_CFG" value="Disabled" locked="false"/>

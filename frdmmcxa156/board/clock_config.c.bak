@@ -57,6 +57,7 @@ void BOARD_InitBootClocks(void)
 name: BOARD_BootClockFRO12M
 called_from_default_init: true
 outputs:
+- {id: ADC0_clock.outFreq, value: 12 MHz}
 - {id: CLK_1M_clock.outFreq, value: 1 MHz}
 - {id: CPU_clock.outFreq, value: 12 MHz}
 - {id: CTIMER0_clock.outFreq, value: 12 MHz}
@@ -69,8 +70,10 @@ outputs:
 - {id: WWDT0_clock.outFreq, value: 1 MHz}
 settings:
 - {id: SCGMode, value: SIRC}
+- {id: ADC0CLKDIV_HALT, value: Enable}
 - {id: CTIMER0CLKDIV_HALT, value: Enable}
 - {id: FRO_HF_PERIPHERALS_EN_CFG, value: Disabled}
+- {id: MRCC.ADC0CLKSEL.sel, value: SCG.FRO_12M}
 - {id: MRCC.CTIMER0CLKSEL.sel, value: SCG.FRO_12M}
 - {id: MRCC.FREQMEREFCLKSEL.sel, value: MRCC.aoi0_out0}
 - {id: MRCC.FREQMETARGETCLKSEL.sel, value: MRCC.aoi0_out0}
@@ -136,10 +139,12 @@ void BOARD_BootClockFRO12M(void)
 
     /*!< Set up clock selectors - Attach clocks to the peripheries */
     CLOCK_AttachClk(kCPU_CLK_to_TRACE);                    /* !< Switch TRACE to CPU_CLK */
+    CLOCK_AttachClk(kFRO12M_to_ADC0);                      /* !< Switch ADC0 to FRO12M */
     CLOCK_AttachClk(kFRO12M_to_CTIMER0);                   /* !< Switch CTIMER0 to FRO12M */
 
     /*!< Set up dividers */
     CLOCK_SetClockDiv(kCLOCK_DivTRACE, 1U);                /* !< Set TRACECLKDIV divider to value 1 */
+    CLOCK_SetClockDiv(kCLOCK_DivADC0, 1U);                 /* !< Set ADC0CLKDIV divider to value 1 */
     CLOCK_SetClockDiv(kCLOCK_DivCTIMER0, 1U);              /* !< Set CTIMER0CLKDIV divider to value 1 */
     CLOCK_SetClockDiv(kCLOCK_DivWWDT0, 1U);                /* !< Set WWDT0CLKDIV divider to value 1 */
 

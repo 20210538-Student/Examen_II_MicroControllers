@@ -33,7 +33,7 @@
 static volatile uint16_t adc_value = 0U;
 static volatile bool adc_valid = false;
 
-static uint8_t texto_adc[32];
+static uint8_t texto_adc[96];
 /*******************************************************************************
  * Variables del pulsador
  ******************************************************************************/
@@ -44,6 +44,10 @@ static bool mode_pending = false;
  * Variables del UART nonblocking RECEPTOR
  ******************************************************************************/
 static uint8_t rx_buffer[128];
+static volatile uint32_t rx_detectados = 0U;
+static volatile uint32_t rx_leidos = 0U;
+static volatile uint32_t ecos_enviados = 0U;
+static volatile status_t rx_estado = kStatus_Success;
 /*******************************************************************************
  * Variables del UART nonblocking TRANSMISOR
  ******************************************************************************/
@@ -52,9 +56,6 @@ static uint8_t texto_pause[] = "PAUSE\r\n";
 
 static lpuart_handle_t uart_handle; //static para que su memoria siga disponible mientras el driver transmite datos
 static volatile bool UART_OCUPED = false; //volatile para que el compilador no optimice o modifique la variable en la compilacion y la lea siempre de memoria
-
-//static uint8_t encendido[] = "ENCENDIDO\r\n";
-//static uint8_t apagado[]   = "APAGADO\r\n";
 
 /*******************************************************************************
  * Variable del CTIMER base del tiepo
@@ -162,6 +163,34 @@ static bool SW2_VALID(uint32_t pulse_now)
     return false;
 }
 
+static void UART_test(void)
+{
+    static uint8_t eco[2] = {0};
+    static bool eco_pendiente = false;
+
+    /* Consultar si hay un carácter disponible; no esperar por él. */
+    if (!eco_pendiente &&
+        ((LPUART_GetStatusFlags(LPUART0) &
+          kLPUART_RxDataRegFullFlag) != 0U))
+    {
+        eco[0] = LPUART_ReadByte(LPUART0);
+        eco[1] = '\0';
+
+        rx_detectados++;
+        rx_leidos++;
+        eco_pendiente = true;
+    }
+
+    if (eco_pendiente && !mode_pending && !UART_OCUPED)
+    {
+        if (UART_sendtext(eco))
+        {
+            ecos_enviados++;
+            eco_pendiente = false;
+        }
+    }
+}
+
 static uint32_t ADC_Porcentaje(uint16_t lectura) // Convierte la lectura del ADC a porcentaje de 0 a 100
 {
     return ((uint32_t)lectura * 100U + 2047U) / 4095U;
@@ -170,12 +199,15 @@ static uint32_t ADC_Porcentaje(uint16_t lectura) // Convierte la lectura del ADC
 int main(void)
 {
     BOARD_InitHardware(); // Inicializacion de hardware y perifericos
-
     /* Inicializo en bajo. */
     GPIO_PinWrite(BOARD_INITPINS_Activity_LED_GPIO, BOARD_INITPINS_Activity_LED_GPIO_PIN, 1U);
     GPIO_PinWrite(BOARD_INITPINS_Alarm_LED_GPIO, BOARD_INITPINS_Alarm_LED_GPIO_PIN, 1U);
+    LPUART_EnableRx(LPUART0, true);
     LPUART_TransferCreateHandle(LPUART0, &uart_handle, UART_Callback, NULL);
+    LPUART_TransferStartRingBuffer(LPUART0, &uart_handle, rx_buffer, sizeof(rx_buffer));
+    LPUART_EnableInterrupts(LPUART0, kLPUART_RxDataRegFullInterruptEnable);
 
+EnableIRQ(LPUART0_IRQn);
     uint32_t last_change = tiempo_ms;
     uint32_t last_telemetry = tiempo_ms;
     uint32_t last_adc = tiempo_ms;
@@ -228,8 +260,16 @@ int main(void)
                 uint16_t muestra = adc_value;
                 uint32_t porcentaje = ADC_Porcentaje(muestra);
 
-                int longitud = snprintf((char *)texto_adc, sizeof(texto_adc), "ADC=%u; PCT=%u\r\n", (unsigned int)muestra, (unsigned int)porcentaje);
-                
+                int longitud = snprintf(
+                    (char *)texto_adc,
+                    sizeof(texto_adc),
+                    "ADC=%u;PCT=%u;RXMAX=%lu;LEIDOS=%lu;ECOS=%lu\r\n",
+                    (unsigned int)muestra,
+                    (unsigned int)porcentaje,
+                    (unsigned long)rx_detectados,
+                    (unsigned long)rx_leidos,
+                    (unsigned long)ecos_enviados);
+
                 if ((longitud > 0) &&
                     ((size_t)longitud < sizeof(texto_adc)))
                 {
@@ -237,5 +277,6 @@ int main(void)
                 }
             }
         }
+        UART_test();
     }
 }

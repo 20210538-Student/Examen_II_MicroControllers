@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 
 /*******************************************************************************
@@ -33,7 +34,7 @@
 static volatile uint16_t adc_value = 0U;
 static volatile bool adc_valid = false;
 
-static uint8_t texto_adc[96];
+static uint8_t texto_adc[160];
 /*******************************************************************************
  * Variables del pulsador
  ******************************************************************************/
@@ -44,10 +45,6 @@ static bool mode_pending = false;
  * Variables del UART nonblocking RECEPTOR
  ******************************************************************************/
 static uint8_t rx_buffer[128];
-static volatile uint32_t rx_detectados = 0U;
-static volatile uint32_t rx_leidos = 0U;
-static volatile uint32_t ecos_enviados = 0U;
-static volatile status_t rx_estado = kStatus_Success;
 /*******************************************************************************
  * Variables del UART nonblocking TRANSMISOR
  ******************************************************************************/
@@ -108,16 +105,16 @@ static void UART_Callback(LPUART_Type *base, lpuart_handle_t *handle, status_t s
     }
 }
 
-static bool UART_sendtext(uint8_t *texto)
+static bool UART_sendbuffer(uint8_t *data, size_t data_size)
 {
-    if (UART_OCUPED || texto[0] == '\0')
+    if (UART_OCUPED || data_size == 0U)
     {
         return false;
     }
 
     lpuart_transfer_t message = {0};
-    message.data = texto;
-    message.dataSize = strlen((const char *)texto);
+    message.data = data;
+    message.dataSize = data_size;
 
     UART_OCUPED = true;
 
@@ -130,6 +127,17 @@ static bool UART_sendtext(uint8_t *texto)
 
     return true;
 }
+
+static bool UART_sendtext(uint8_t *texto)
+{
+    if (texto[0] == '\0')
+    {
+        return false;
+    }
+
+    return UART_sendbuffer(texto, strlen((const char *)texto));
+}
+
 static bool SW2_VALID(uint32_t pulse_now)
 {
     static uint32_t last_state = 1U;
@@ -163,29 +171,40 @@ static bool SW2_VALID(uint32_t pulse_now)
     return false;
 }
 
-static void UART_test(void)
+static void UART_write_text(void)
 {
     static uint8_t eco[2] = {0};
     static bool eco_pendiente = false;
 
-    /* Consultar si hay un carácter disponible; no esperar por él. */
-    if (!eco_pendiente &&
-        ((LPUART_GetStatusFlags(LPUART0) &
-          kLPUART_RxDataRegFullFlag) != 0U))
+    if (mode_pending || UART_OCUPED)
     {
-        eco[0] = LPUART_ReadByte(LPUART0);
-        eco[1] = '\0';
-
-        rx_detectados++;
-        rx_leidos++;
-        eco_pendiente = true;
+        return;
     }
 
-    if (eco_pendiente && !mode_pending && !UART_OCUPED)
+    if (!eco_pendiente &&
+        LPUART_TransferGetRxRingBufferLength(
+            LPUART0, &uart_handle) > 0U)
+    {
+        lpuart_transfer_t recepcion = {0};
+        size_t recibidos = 0U;
+
+        recepcion.data = eco;
+        recepcion.dataSize = 1U;
+
+        status_t resultado = LPUART_TransferReceiveNonBlocking(
+            LPUART0, &uart_handle, &recepcion, &recibidos);
+
+        if ((resultado == kStatus_Success) && (recibidos == 1U))
+        {
+            eco[1] = '\0';
+            eco_pendiente = (eco[0] != '\0');
+        }
+    }
+
+    if (eco_pendiente)
     {
         if (UART_sendtext(eco))
         {
-            ecos_enviados++;
             eco_pendiente = false;
         }
     }
@@ -199,15 +218,15 @@ static uint32_t ADC_Porcentaje(uint16_t lectura) // Convierte la lectura del ADC
 int main(void)
 {
     BOARD_InitHardware(); // Inicializacion de hardware y perifericos
-    /* Inicializo en bajo. */
+    /* Inicializo en  en el contexto de un pullup. */
     GPIO_PinWrite(BOARD_INITPINS_Activity_LED_GPIO, BOARD_INITPINS_Activity_LED_GPIO_PIN, 1U);
     GPIO_PinWrite(BOARD_INITPINS_Alarm_LED_GPIO, BOARD_INITPINS_Alarm_LED_GPIO_PIN, 1U);
-    LPUART_EnableRx(LPUART0, true);
     LPUART_TransferCreateHandle(LPUART0, &uart_handle, UART_Callback, NULL);
+    /* BOARD_InitDebugConsole configura LPUART0; asegurar que RX siga habilitado. */
+    LPUART_EnableRx(LPUART0, true);
     LPUART_TransferStartRingBuffer(LPUART0, &uart_handle, rx_buffer, sizeof(rx_buffer));
-    LPUART_EnableInterrupts(LPUART0, kLPUART_RxDataRegFullInterruptEnable);
+    EnableIRQ(LPUART0_SERIAL_RX_TX_IRQN);
 
-EnableIRQ(LPUART0_IRQn);
     uint32_t last_change = tiempo_ms;
     uint32_t last_telemetry = tiempo_ms;
     uint32_t last_adc = tiempo_ms;
@@ -260,15 +279,12 @@ EnableIRQ(LPUART0_IRQn);
                 uint16_t muestra = adc_value;
                 uint32_t porcentaje = ADC_Porcentaje(muestra);
 
-                int longitud = snprintf(
-                    (char *)texto_adc,
-                    sizeof(texto_adc),
-                    "ADC=%u;PCT=%u;RXMAX=%lu;LEIDOS=%lu;ECOS=%lu\r\n",
-                    (unsigned int)muestra,
-                    (unsigned int)porcentaje,
-                    (unsigned long)rx_detectados,
-                    (unsigned long)rx_leidos,
-                    (unsigned long)ecos_enviados);
+            int longitud = snprintf(
+            (char *)texto_adc,
+            sizeof(texto_adc),
+            "ADC=%u;PCT=%u\r\n",
+            (unsigned int)muestra,
+            (unsigned int)porcentaje);
 
                 if ((longitud > 0) &&
                     ((size_t)longitud < sizeof(texto_adc)))
@@ -277,6 +293,6 @@ EnableIRQ(LPUART0_IRQn);
                 }
             }
         }
-        UART_test();
+        UART_write_text();
     }
 }

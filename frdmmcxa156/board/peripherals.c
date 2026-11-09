@@ -49,6 +49,7 @@ component:
  * Included files
  **********************************************************************************************************************/
 #include "peripherals.h"
+#include "board.h"
 
 /***********************************************************************************************************************
  * BOARD_InitPeripherals functional group
@@ -277,6 +278,15 @@ static void ADC0_init(void) {
   EnableIRQ(ADC0_IRQN);
 }
 
+static void LPUART0_init(void) {
+  lpuart_config_t config;
+  LPUART_GetDefaultConfig(&config);
+  config.baudRate_Bps = BOARD_DEBUG_UART_BAUDRATE;
+  config.enableTx = true;
+  config.enableRx = true;
+  assert(LPUART_Init(LPUART0, &config, BOARD_DEBUG_UART_CLK_FREQ) == kStatus_Success);
+}
+
 /***********************************************************************************************************************
  * Initialization functions
  **********************************************************************************************************************/
@@ -293,6 +303,7 @@ void BOARD_InitPeripherals(void)
   /* Initialize components */
   CTIMER0_init();
   ADC0_init();
+  LPUART0_init();
   /* Common post-initialization */
   BOARD_InitPeripherals_CommonPostInit();
 }

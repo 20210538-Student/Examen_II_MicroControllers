@@ -13,6 +13,7 @@
 #include "fsl_ctimer.h"
 #include "fsl_clock.h"
 #include "fsl_lpadc.h"
+#include "fsl_lpuart.h"
 
 #if defined(__cplusplus)
 extern "C" {
@@ -54,6 +55,8 @@ extern "C" {
 #define ADC0_ADC_POT 1U
 /* Trigger 0 - Pot_Trigger */
 #define ADC0_POT_TRIGGER 0U
+#define LPUART0_SERIAL_RX_TX_IRQN LPUART0_IRQn
+#define LPUART0_SERIAL_RX_TX_IRQHANDLER LPUART0_IRQHandler
 
 /***********************************************************************************************************************
  * Global variables

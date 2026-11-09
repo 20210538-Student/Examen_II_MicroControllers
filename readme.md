@@ -128,3 +128,5 @@ t=1200;ADC=2866;PCT=70;THR=70;MODE=RUN;ALARM=1
 6. Variar el potenciómetro y observar ADC/PCT, actividad y alarma. Probar `STATUS`, `THR 75`, `STOP`, `START`, `OFF_TELE` y `ON_TELE`.
 
 Las comprobaciones funcionales incluyen antirrebote, histéresis, continuidad en PAUSE, validación de líneas y respuesta a comandos. La verificación temporal contempla los periodos de 100/500/1000 ms y la respuesta UART dentro de 100 ms.
+
+VIDEO_LINK_DEMOSTRATIVO: https://vimeo.com/1244987722

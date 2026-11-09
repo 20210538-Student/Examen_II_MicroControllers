@@ -19,7 +19,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -53,14 +52,15 @@ static bool comando_cr = false;
 /*******************************************************************************
  * Variables del UART nonblocking TRANSMISOR
  ******************************************************************************/
-static uint8_t texto_run[]   = "RUN\r\n";
+static uint8_t texto_run[] = "RUN\r\n";
 static uint8_t texto_pause[] = "PAUSE\r\n";
+static bool telemetria_habilitada = true;
 static uint8_t respuesta_uart[160];
 static bool respuesta_pendiente = false;
 static uint32_t umbral = 70U;
 static bool alarma_encendida = false;
-static lpuart_handle_t uart_handle; //static para que su memoria siga disponible mientras el driver transmite datos
-static volatile bool UART_OCUPED = false; //volatile para que el compilador no optimice o modifique la variable en la compilacion y la lea siempre de memoria
+static lpuart_handle_t uart_handle;       // static para que su memoria siga disponible mientras el driver transmite datos
+static volatile bool UART_OCUPED = false; // volatile para que el compilador no optimice o modifique la variable en la compilacion y la lea siempre de memoria
 
 /*******************************************************************************
  * Variable del CTIMER base del tiepo
@@ -98,7 +98,7 @@ void ADC0_IRQHandler(void)
     }
 }
 
-void CTIMER0_TimebaseCB(uint32_t flags) //Base temporal de tiempo en ms
+void CTIMER0_TimebaseCB(uint32_t flags) // Base temporal de tiempo en ms
 {
     (void)flags;
     tiempo_ms++;
@@ -175,7 +175,7 @@ static bool SW2_VALID(uint32_t pulse_now)
 
         if (stable == 0U)
         {
-            return true;  /* Pulsación confirmada. */
+            return true; /* Pulsación confirmada. */
         }
     }
 
@@ -303,6 +303,19 @@ static void UART_ProcesarComando(const char *comando)
         Modo_Set(false);
         UART_PrepararRespuesta("OK PAUSE");
     }
+    else if (strcmp(comando, "OFF_TELE") == 0)
+    {
+        telemetria_habilitada = false;
+        telemetrias_pendientes = 0U;
+
+        UART_PrepararRespuesta("OK TELE OFF");
+    }
+    else if (strcmp(comando, "ON_TELE") == 0)
+    {
+        telemetria_habilitada = true;
+
+        UART_PrepararRespuesta("OK TELE ON");
+    }
     else if (strncmp(comando, "THR ", 4U) == 0)
     {
         const char *digito = comando + 4U;
@@ -356,7 +369,7 @@ static void UART_ProcesarComando(const char *comando)
             "OK THR=%lu\r\n",
             (unsigned long)umbral);
 
-        respuesta_pendiente =(longitud > 0) && ((size_t)longitud < sizeof(respuesta_uart));
+        respuesta_pendiente = (longitud > 0) && ((size_t)longitud < sizeof(respuesta_uart));
     }
     else
     {
@@ -552,12 +565,16 @@ int main(void)
             uint32_t periodos = transcurrido / 1000U;
 
             last_telemetry += periodos * 1000U;
-            telemetrias_pendientes += periodos;
+
+            if (telemetria_habilitada)
+            {
+                telemetrias_pendientes += periodos;
+            }
         }
         Alarma_Actualizar();
         UART_write_text();
-        
-        if ((telemetrias_pendientes > 0U) &&
+        if (telemetria_habilitada &&
+            (telemetrias_pendientes > 0U) &&
             !mode_pending &&
             !respuesta_pendiente &&
             !UART_OCUPED &&

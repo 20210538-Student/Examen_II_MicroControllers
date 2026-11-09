@@ -1,4 +1,9 @@
 /*
+Studendt: Joseph Ramirez (20210530)
+Professor: Wilkins Gabriel Cedano
+Assignment: Examen Parcial II
+Asignature: Microcontrollers
+
  * Copyright 2019 NXP
  * All rights reserved.
  *
